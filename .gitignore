@@ -60,3 +60,6 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
+
+# Plano local do Claude
+plan_claude.md
