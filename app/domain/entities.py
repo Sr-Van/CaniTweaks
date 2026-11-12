@@ -1,26 +1,44 @@
-"""Entidades do domínio."""
+"""Entidades do domínio (imutáveis e sem conhecimento do sistema operacional)."""
 from dataclasses import dataclass
-from typing import List, Optional
-from app.domain.enums import TweakCategory, TweakStatus
+from typing import Tuple
+
+from app.domain.enums import RiskLevel, TweakCategory, TweakKind
 
 
-@dataclass
+@dataclass(frozen=True)
 class Tweak:
-    """Entidade que representa um Tweak do sistema."""
+    """Descreve um tweak do catálogo. O estado atual vem sempre do TweakPort."""
+
     id: str
     name: str
     summary: str
     category: TweakCategory
+    risk: RiskLevel = RiskLevel.LOW
+    kind: TweakKind = TweakKind.TOGGLE
     requires_restart: bool = False
     technical_detail: str = ""
-    status: TweakStatus = TweakStatus.INACTIVE
+    min_windows_build: int = 0
+
+    @property
+    def is_reversible(self) -> bool:
+        return self.kind == TweakKind.TOGGLE
 
 
-@dataclass
+@dataclass(frozen=True)
 class Preset:
-    """Entidade que representa um Preset de otimizações."""
+    """Perfil pré-configurado que agrupa vários tweaks."""
+
     id: str
     name: str
     description: str
     icon: str
-    tweak_ids: List[str]
+    tweak_ids: Tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class SystemInfo:
+    """Informações do ambiente em que o aplicativo está rodando."""
+
+    is_admin: bool
+    windows_label: str
+    windows_build: int
