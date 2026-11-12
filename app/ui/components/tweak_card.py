@@ -1,20 +1,18 @@
 """Componente visual para exibição individual de um Tweak."""
-import customtkinter as ctk
 from typing import Callable
+
+import customtkinter as ctk
+
 from app.domain.entities import Tweak
-from app.domain.enums import TweakCategory, TweakStatus
+from app.domain.enums import TweakKind, TweakStatus
+from app.ui import theme
 
-
-CATEGORY_COLORS = {
-    TweakCategory.LATENCY: ("#1f538d", "#2980b9"),        # Azul
-    TweakCategory.FPS: ("#6c3483", "#8e44ad"),            # Roxo
-    TweakCategory.RAM_PROCESSES: ("#b9770e", "#d68910"),  # Âmbar / Laranja
-    TweakCategory.DISK_CLEANUP: ("#196f3d", "#27ae60"),   # Verde
-}
+_MIN_WRAP = 240
+_WRAP_MARGIN = 16
 
 
 class TweakCard(ctk.CTkFrame):
-    """Card moderno que exibe as informações e ações de um Tweak."""
+    """Card que exibe as informações de um tweak e o botão de Aplicar/Reverter/Executar."""
 
     def __init__(
         self,
@@ -22,138 +20,148 @@ class TweakCard(ctk.CTkFrame):
         tweak: Tweak,
         on_apply: Callable[[str], None],
         on_revert: Callable[[str], None],
-        **kwargs
+        **kwargs,
     ):
-        super().__init__(master, corner_radius=10, fg_color=("#2b2b2b", "#1e1e1e"), **kwargs)
+        super().__init__(master, corner_radius=10, fg_color=theme.CARD_BG, **kwargs)
         self.tweak = tweak
-        self.on_apply = on_apply
-        self.on_revert = on_revert
+        self._on_apply = on_apply
+        self._on_revert = on_revert
+        self._status = TweakStatus.PENDING
+        self._interaction_enabled = True
 
         self.grid_columnconfigure(0, weight=1)
-        self.grid_columnconfigure(1, weight=0)
+        self._build_info_column()
+        self._build_action_column()
+        self.set_status(TweakStatus.PENDING, pending_text="⏳ Verificando...")
 
-        # Container esquerdo (Texto e Detalhes)
-        left_container = ctk.CTkFrame(self, fg_color="transparent")
-        left_container.grid(row=0, column=0, sticky="nsew", padx=(16, 10), pady=14)
+    # --- Construção -------------------------------------------------------------------------
 
-        # Linha 1: Título e Tag de Categoria
-        header_row = ctk.CTkFrame(left_container, fg_color="transparent")
-        header_row.pack(fill="x", anchor="w")
+    def _build_info_column(self) -> None:
+        info = ctk.CTkFrame(self, fg_color="transparent")
+        info.grid(row=0, column=0, sticky="nsew", padx=(16, 10), pady=14)
 
-        title_lbl = ctk.CTkLabel(
-            header_row,
-            text=tweak.name,
-            font=ctk.CTkFont(size=14, weight="bold"),
-            anchor="w"
-        )
-        title_lbl.pack(side="left")
+        header = ctk.CTkFrame(info, fg_color="transparent")
+        header.pack(fill="x", anchor="w")
+        ctk.CTkLabel(
+            header, text=self.tweak.name, font=ctk.CTkFont(size=14, weight="bold"), anchor="w"
+        ).pack(side="left")
+        self._add_badges(header)
 
-        # Badge de categoria
-        badge_color = CATEGORY_COLORS.get(tweak.category, ("#4a4a4a", "#4a4a4a"))
-        cat_badge = ctk.CTkLabel(
-            header_row,
-            text=f" {tweak.category.value} ",
-            font=ctk.CTkFont(size=11, weight="bold"),
-            fg_color=badge_color[1],
-            text_color="#ffffff",
-            corner_radius=6,
-            height=20
-        )
-        cat_badge.pack(side="left", padx=(10, 0))
-
-        if tweak.requires_restart:
-            restart_badge = ctk.CTkLabel(
-                header_row,
-                text=" 🔄 Reinício ",
-                font=ctk.CTkFont(size=10, weight="bold"),
-                fg_color="#78281f",
-                text_color="#f5b7b1",
-                corner_radius=6,
-                height=20
-            )
-            restart_badge.pack(side="left", padx=(6, 0))
-
-        # Linha 2: Resumo
-        summary_lbl = ctk.CTkLabel(
-            left_container,
-            text=tweak.summary,
+        self._summary = ctk.CTkLabel(
+            info,
+            text=self.tweak.summary,
             font=ctk.CTkFont(size=12),
-            text_color=("#cccccc", "#a0a0a0"),
-            wraplength=540,
+            text_color=theme.BODY_TEXT,
+            wraplength=_MIN_WRAP,
             justify="left",
-            anchor="w"
+            anchor="w",
         )
-        summary_lbl.pack(fill="x", anchor="w", pady=(6, 4))
+        self._summary.pack(fill="x", anchor="w", pady=(6, 4))
+        info.bind("<Configure>", self._on_resize)
 
-        # Linha 3: Detalhes Técnicos
-        if tweak.technical_detail:
-            tech_lbl = ctk.CTkLabel(
-                left_container,
-                text=f"⚙️ {tweak.technical_detail}",
+        if self.tweak.technical_detail:
+            ctk.CTkLabel(
+                info,
+                text=f"⚙ {self.tweak.technical_detail}",
                 font=ctk.CTkFont(size=10),
                 text_color=("#888888", "#707070"),
-                anchor="w"
-            )
-            tech_lbl.pack(fill="x", anchor="w")
+                anchor="w",
+            ).pack(fill="x", anchor="w")
 
-        # Container direito (Status e Ação)
-        right_container = ctk.CTkFrame(self, fg_color="transparent", width=140)
-        right_container.grid(row=0, column=1, sticky="ns", padx=(10, 16), pady=14)
+        self._note = ctk.CTkLabel(info, text="", font=ctk.CTkFont(size=11, weight="bold"), anchor="w")
 
-        # Status badge
-        self.status_lbl = ctk.CTkLabel(
-            right_container,
-            text=self._format_status(tweak.status),
-            font=ctk.CTkFont(size=12, weight="bold"),
-            text_color=self._get_status_color(tweak.status)
+    def _add_badges(self, header: ctk.CTkFrame) -> None:
+        self._badge(header, f" {self.tweak.category.value} ", theme.CATEGORY_COLORS.get(self.tweak.category, "#4a4a4a"), "#ffffff", 11)
+        if self.tweak.risk in theme.RISK_COLORS:
+            background, foreground = theme.RISK_COLORS[self.tweak.risk]
+            self._badge(header, f" Risco {self.tweak.risk.value.lower()} ", background, foreground, 10)
+        if self.tweak.requires_restart:
+            self._badge(header, " 🔄 Reinício ", "#4a235a", "#d7bde2", 10)
+
+    @staticmethod
+    def _badge(parent, text: str, background: str, foreground: str, size: int) -> None:
+        ctk.CTkLabel(
+            parent,
+            text=text,
+            font=ctk.CTkFont(size=size, weight="bold"),
+            fg_color=background,
+            text_color=foreground,
+            corner_radius=6,
+            height=20,
+        ).pack(side="left", padx=(8, 0))
+
+    def _build_action_column(self) -> None:
+        actions = ctk.CTkFrame(self, fg_color="transparent", width=140)
+        actions.grid(row=0, column=1, sticky="ns", padx=(10, 16), pady=14)
+
+        self._status_label = ctk.CTkLabel(actions, text="", font=ctk.CTkFont(size=12, weight="bold"))
+        self._status_label.pack(pady=(4, 8))
+
+        self._button = ctk.CTkButton(
+            actions, text="", width=110, height=32, font=ctk.CTkFont(size=12, weight="bold"), command=self._on_click
         )
-        self.status_lbl.pack(pady=(4, 8))
+        self._button.pack()
 
-        # Botão Aplicar / Reverter
-        self.action_btn = ctk.CTkButton(
-            right_container,
-            text="Reverter" if tweak.status == TweakStatus.ACTIVE else "Aplicar",
-            width=100,
-            height=32,
-            font=ctk.CTkFont(size=12, weight="bold"),
-            fg_color="#34495e" if tweak.status == TweakStatus.ACTIVE else "#1f6aa5",
-            hover_color="#2c3e50" if tweak.status == TweakStatus.ACTIVE else "#144870",
-            command=self._on_button_click
+    # --- Estado -----------------------------------------------------------------------------
+
+    @property
+    def status(self) -> TweakStatus:
+        return self._status
+
+    def set_status(
+        self,
+        status: TweakStatus,
+        note: str = "",
+        note_is_error: bool = False,
+        pending_text: str = "",
+    ) -> None:
+        """Atualiza o estado exibido, com uma mensagem opcional de sucesso/erro."""
+        self._status = status
+        text, color = theme.STATUS_STYLE[status]
+        if status == TweakStatus.INACTIVE and self.tweak.kind == TweakKind.ACTION:
+            text = "Ação pontual"
+        self._status_label.configure(text=pending_text or text, text_color=color)
+        self._set_note(note, note_is_error)
+        self._refresh_button()
+
+    def set_interaction_enabled(self, enabled: bool) -> None:
+        """Desabilita o botão enquanto outra operação do app está em andamento."""
+        self._interaction_enabled = enabled
+        self._refresh_button()
+
+    def _set_note(self, note: str, is_error: bool) -> None:
+        if not note:
+            self._note.pack_forget()
+            return
+        self._note.configure(text=note, text_color=theme.COLOR_ERROR if is_error else theme.COLOR_SUCCESS)
+        self._note.pack(fill="x", anchor="w", pady=(6, 0))
+
+    def _refresh_button(self) -> None:
+        text, color, hover = self._button_style()
+        selectable = self._status not in (TweakStatus.PENDING, TweakStatus.UNSUPPORTED)
+        self._button.configure(
+            text=text,
+            fg_color=color,
+            hover_color=hover,
+            state="normal" if selectable and self._interaction_enabled else "disabled",
         )
-        self.action_btn.pack()
 
-    def _format_status(self, status: TweakStatus) -> str:
-        if status == TweakStatus.ACTIVE:
-            return "● Ativo"
-        elif status == TweakStatus.INACTIVE:
-            return "○ Inativo"
-        elif status == TweakStatus.PENDING:
-            return "⏳ Processando..."
-        return "⚠️ Erro"
+    def _button_style(self):
+        if self._status == TweakStatus.UNSUPPORTED:
+            return "Indisponível", theme.NEUTRAL, theme.NEUTRAL_HOVER
+        if self.tweak.kind == TweakKind.ACTION:
+            return "Executar", theme.ACCENT, theme.ACCENT_HOVER
+        if self._status == TweakStatus.ACTIVE:
+            return "Reverter", theme.NEUTRAL, theme.NEUTRAL_HOVER
+        return "Aplicar", theme.ACCENT, theme.ACCENT_HOVER
 
-    def _get_status_color(self, status: TweakStatus) -> str:
-        if status == TweakStatus.ACTIVE:
-            return "#2ecc71"  # Verde
-        elif status == TweakStatus.INACTIVE:
-            return "#95a5a6"  # Cinza
-        return "#e74c3c"      # Vermelho
+    # --- Eventos ----------------------------------------------------------------------------
 
-    def _on_button_click(self):
-        if self.tweak.status == TweakStatus.ACTIVE:
-            self.on_revert(self.tweak.id)
+    def _on_click(self) -> None:
+        if self._status == TweakStatus.ACTIVE and self.tweak.is_reversible:
+            self._on_revert(self.tweak.id)
         else:
-            self.on_apply(self.tweak.id)
+            self._on_apply(self.tweak.id)
 
-    def update_status(self, status: TweakStatus):
-        self.tweak.status = status
-        self.status_lbl.configure(
-            text=self._format_status(status),
-            text_color=self._get_status_color(status)
-        )
-        is_active = (status == TweakStatus.ACTIVE)
-        self.action_btn.configure(
-            text="Reverter" if is_active else "Aplicar",
-            fg_color="#34495e" if is_active else "#1f6aa5",
-            hover_color="#2c3e50" if is_active else "#144870",
-            state="normal"
-        )
+    def _on_resize(self, event) -> None:
+        self._summary.configure(wraplength=max(_MIN_WRAP, event.width - _WRAP_MARGIN))

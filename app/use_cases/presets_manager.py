@@ -63,6 +63,11 @@ class PresetsManager:
         active = sum(1 for tweak in relevant if statuses.get(tweak.id) == TweakStatus.ACTIVE)
         return active, len(relevant)
 
+    def get_all_progress(self) -> Dict[str, Tuple[int, int]]:
+        """Progresso (ativos, total) de todos os presets (consulta o sistema; pode ser lento)."""
+        statuses = self._tweaks.get_statuses()
+        return {preset.id: self.get_progress(preset.id, statuses) for preset in self._presets}
+
     def _find(self, preset_id: str) -> Preset:
         for preset in self._presets:
             if preset.id == preset_id:

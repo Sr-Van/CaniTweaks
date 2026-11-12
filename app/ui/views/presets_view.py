@@ -1,150 +1,109 @@
 """Aba de Presets com perfis prontos de otimização."""
-import threading
+from typing import Callable, Dict, List, Tuple
+
 import customtkinter as ctk
-from typing import Callable, List
-from app.domain.entities import Preset
+
+from app.ui import theme
+from app.ui.batch_flow import BatchFlow
+from app.ui.components.dialogs import ConfirmDialog
+from app.ui.components.preset_card import PresetCard
+from app.ui.task_runner import UiTaskRunner
 from app.use_cases.presets_manager import PresetsManager
 
 
 class PresetsView(ctk.CTkFrame):
-    """Visualização da aba de Presets de 1 clique."""
+    """Lista de presets com aplicação e reversão em um clique."""
 
-    def __init__(self, master, presets_manager: PresetsManager, on_preset_applied: Callable[[], None], **kwargs):
+    def __init__(
+        self,
+        master,
+        presets_manager: PresetsManager,
+        tasks: UiTaskRunner,
+        on_restart_needed: Callable[[List[str]], None],
+        on_request_restart: Callable[[], None],
+        **kwargs,
+    ):
         super().__init__(master, fg_color="transparent", **kwargs)
-        self.presets_manager = presets_manager
-        self.on_preset_applied = on_preset_applied
-        self.is_busy = False
+        self._presets = presets_manager
+        self._tasks = tasks
+        self._cards: Dict[str, PresetCard] = {}
+        self._loading = False
 
+        self._flow = BatchFlow(self, tasks, on_restart_needed, on_request_restart)
+
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(2, weight=1)
         self._build_header()
-        self._build_progress_area()
-        self._build_presets_list()
+        self._flow.panel.grid(row=1, column=0, sticky="ew", padx=20, pady=(0, 8))
+        self._flow.panel.hide()
+        self._build_cards()
 
-    def _build_header(self):
-        header_frame = ctk.CTkFrame(self, fg_color="transparent")
-        header_frame.pack(fill="x", padx=20, pady=(15, 10))
+        tasks.subscribe_busy(self._on_busy_changed)
 
-        title = ctk.CTkLabel(
-            header_frame,
-            text="🎯 Presets Rápidos",
-            font=ctk.CTkFont(size=22, weight="bold")
-        )
-        title.pack(anchor="w")
+    def _build_header(self) -> None:
+        header = ctk.CTkFrame(self, fg_color="transparent")
+        header.grid(row=0, column=0, sticky="ew", padx=20, pady=(15, 10))
+        ctk.CTkLabel(header, text="🎯 Presets Rápidos", font=ctk.CTkFont(size=22, weight="bold")).pack(anchor="w")
+        ctk.CTkLabel(
+            header,
+            text="Aplique conjuntos de otimizações com um clique. Cada preset pode ser revertido depois.",
+            font=ctk.CTkFont(size=12), text_color=theme.MUTED_TEXT,
+        ).pack(anchor="w", pady=(2, 0))
 
-        subtitle = ctk.CTkLabel(
-            header_frame,
-            text="Aplique configurações otimizadas em lote com apenas um clique para diferentes cenários de uso.",
-            font=ctk.CTkFont(size=12),
-            text_color="#888888"
-        )
-        subtitle.pack(anchor="w", pady=(2, 0))
-
-    def _build_progress_area(self):
-        self.progress_frame = ctk.CTkFrame(self, fg_color="transparent")
-        
-        self.progress_lbl = ctk.CTkLabel(
-            self.progress_frame,
-            text="Aplicando preset...",
-            font=ctk.CTkFont(size=12, weight="bold")
-        )
-        self.progress_lbl.pack(anchor="w", padx=20, pady=(4, 4))
-
-        self.progress_bar = ctk.CTkProgressBar(self.progress_frame, height=10)
-        self.progress_bar.pack(fill="x", padx=20, pady=(0, 10))
-        self.progress_bar.set(0)
-
-    def _build_presets_list(self):
-        scroll_area = ctk.CTkScrollableFrame(self, fg_color="transparent")
-        scroll_area.pack(fill="both", expand=True, padx=20, pady=(0, 15))
-
-        for preset in self.presets_manager.get_presets():
-            card = self._create_preset_card(scroll_area, preset)
+    def _build_cards(self) -> None:
+        scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
+        scroll.grid(row=2, column=0, sticky="nsew", padx=20, pady=(0, 15))
+        for preset in self._presets.get_presets():
+            names = [tweak.name for tweak in self._presets.get_preset_tweaks(preset.id)]
+            card = PresetCard(scroll, preset, names, self._confirm_apply, self._confirm_revert)
             card.pack(fill="x", pady=10)
+            self._cards[preset.id] = card
 
-    def _create_preset_card(self, master, preset: Preset) -> ctk.CTkFrame:
-        card = ctk.CTkFrame(master, corner_radius=12, fg_color=("#2b2b2b", "#1e1e1e"))
+    # --- Estado -----------------------------------------------------------------------------
 
-        top_row = ctk.CTkFrame(card, fg_color="transparent")
-        top_row.pack(fill="x", padx=18, pady=(16, 6))
-
-        title_lbl = ctk.CTkLabel(
-            top_row,
-            text=f"{preset.icon}  {preset.name}",
-            font=ctk.CTkFont(size=16, weight="bold")
-        )
-        title_lbl.pack(side="left")
-
-        apply_btn = ctk.CTkButton(
-            top_row,
-            text="Aplicar Preset",
-            font=ctk.CTkFont(size=12, weight="bold"),
-            fg_color="#1f6aa5",
-            hover_color="#144870",
-            width=120,
-            height=34,
-            command=lambda p_id=preset.id: self._apply_preset_threaded(p_id)
-        )
-        apply_btn.pack(side="right")
-
-        desc_lbl = ctk.CTkLabel(
-            card,
-            text=preset.description,
-            font=ctk.CTkFont(size=12),
-            text_color=("#cccccc", "#a0a0a0"),
-            wraplength=640,
-            justify="left",
-            anchor="w"
-        )
-        desc_lbl.pack(fill="x", padx=18, pady=(0, 10))
-
-        # Tags com lista de tweaks inclusos
-        tags_row = ctk.CTkFrame(card, fg_color="transparent")
-        tags_row.pack(fill="x", padx=18, pady=(0, 14))
-
-        count_badge = ctk.CTkLabel(
-            tags_row,
-            text=f" Inclusos ({len(preset.tweak_ids)} tweaks): ",
-            font=ctk.CTkFont(size=11, weight="bold"),
-            text_color="#888888"
-        )
-        count_badge.pack(side="left")
-
-        tweaks_summary = ", ".join(preset.tweak_ids[:5])
-        if len(preset.tweak_ids) > 5:
-            tweaks_summary += f" +{len(preset.tweak_ids) - 5} outros"
-
-        tweaks_names = ctk.CTkLabel(
-            tags_row,
-            text=tweaks_summary,
-            font=ctk.CTkFont(size=11),
-            text_color="#2b7de9"
-        )
-        tweaks_names.pack(side="left", padx=(4, 0))
-
-        return card
-
-    def _apply_preset_threaded(self, preset_id: str):
-        if self.is_busy:
+    def refresh_statuses(self) -> None:
+        """Atualiza, em segundo plano, quantos tweaks de cada preset já estão ativos."""
+        if self._loading or self._tasks.is_busy:
             return
+        self._loading = True
+        self._tasks.run(self._presets.get_all_progress, self._on_progress_loaded, self._on_progress_failed)
 
-        self.is_busy = True
-        self.progress_frame.pack(fill="x", before=self.winfo_children()[-1])
-        self.progress_bar.set(0)
+    def _on_progress_loaded(self, progress: Dict[str, Tuple[int, int]]) -> None:
+        self._loading = False
+        for preset_id, (active, total) in progress.items():
+            self._cards[preset_id].set_progress(active, total)
 
-        def progress_callback(current: int, total: int, tweak_name: str):
-            fraction = current / total
-            def update():
-                self.progress_bar.set(fraction)
-                self.progress_lbl.configure(text=f"Aplicando ({current}/{total}): {tweak_name}...")
-            self.after(0, update)
+    def _on_progress_failed(self, _exc: Exception) -> None:
+        self._loading = False
 
-        def worker():
-            self.presets_manager.apply_preset(preset_id, progress_callback)
-            
-            def finalize():
-                self.progress_frame.pack_forget()
-                self.is_busy = False
-                self.on_preset_applied()
+    def _on_busy_changed(self, busy: bool) -> None:
+        for card in self._cards.values():
+            card.set_interaction_enabled(not busy)
+        if not busy and self.winfo_ismapped():
+            self.refresh_statuses()
 
-            self.after(300, finalize)
+    # --- Ações ------------------------------------------------------------------------------
 
-        threading.Thread(target=worker, daemon=True).start()
+    def _confirm_apply(self, preset_id: str) -> None:
+        card = self._cards[preset_id]
+        message = (
+            f"O preset \"{card.preset.name}\" será aplicado. Um ponto de restauração do Windows "
+            "será criado antes e você poderá reverter o preset a qualquer momento."
+        )
+        ConfirmDialog(self, "Aplicar preset", message, self._tweak_names(preset_id), "Aplicar",
+                      lambda: self._start(preset_id, apply=True))
+
+    def _confirm_revert(self, preset_id: str) -> None:
+        card = self._cards[preset_id]
+        message = f"As otimizações ativas do preset \"{card.preset.name}\" voltarão ao estado original."
+        ConfirmDialog(self, "Reverter preset", message, self._tweak_names(preset_id), "Reverter",
+                      lambda: self._start(preset_id, apply=False))
+
+    def _tweak_names(self, preset_id: str) -> List[str]:
+        return [tweak.name for tweak in self._presets.get_preset_tweaks(preset_id)]
+
+    def _start(self, preset_id: str, apply: bool) -> None:
+        run = self._presets.apply_preset if apply else self._presets.revert_preset
+        intro = "Criando ponto de restauração (pode levar alguns segundos)..." if apply else "Iniciando..."
+        title = "Resultado do preset" if apply else "Resultado da reversão do preset"
+        self._flow.start(lambda progress, cancel: run(preset_id, progress, cancel), title, intro)
