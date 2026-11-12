@@ -149,47 +149,37 @@ O sistema segue os princípios de separação estrita de responsabilidades: o **
                        └─────────────────────────────┘         └──────────────────────────────┘
 ```
 
-### Estrutura de Diretórios Recomendada
+### Estrutura de Diretórios (implementada)
 
 ```text
 pc-tweaks/
-├── context.md                    # Especificação e arquitetura do projeto
-├── README.md                     # Instruções de execução e build
-├── requirements.txt              # Dependências (customtkinter, pillow, pyinstaller)
-├── build.py                      # Script de compilação em .exe (PyInstaller)
 ├── app/
-│   ├── __init__.py
-│   ├── main.py                   # Ponto de entrada (validação de UAC e inicialização da UI)
-│   ├── domain/                   # Camada de Entidades e Regras de Negócio Puras
-│   │   ├── __init__.py
-│   │   ├── entities.py           # Classes Tweak, Preset
-│   │   └── enums.py              # TweakCategory, TweakStatus, RiskLevel
-│   ├── ports/                    # Interfaces abstratas (Contratos)
-│   │   ├── __init__.py
-│   │   ├── tweak_port.py         # Interface de ação (apply, revert, is_applied)
-│   │   └── restore_port.py       # Interface de criação de Ponto de Restauração
-│   ├── use_cases/                # Casos de Uso da Aplicação
-│   │   ├── __init__.py
-│   │   ├── tweak_manager.py      # Coordena catálogo, detecção e execução
-│   │   ├── apply_batch.py        # Aplicação em lote com callbacks de progresso
-│   │   └── presets_manager.py    # Gerencia aplicação dos perfis
-│   ├── adapters/                 # Implementações concretas de Sistema Operacional
-│   │   ├── __init__.py
-│   │   ├── registry_adapter.py   # Manipulação segura de winreg (HKLM / HKCU)
-│   │   ├── services_adapter.py   # Controle de serviços via sc.exe / subprocess
-│   │   ├── restore_adapter.py    # Ponto de restauração via WMI / PowerShell
-│   │   ├── disk_clean_adapter.py # Limpeza de arquivos temporários e contagem de bytes
-│   │   └── tweaks_catalog.py     # Definição e registro de todos os tweaks suportados
-│   └── ui/                       # Apresentação gráfica (CustomTkinter)
-│       ├── __init__.py
-│       ├── app_window.py         # Janela principal e controle de abas
-│       ├── views/
-│       │   ├── tweaks_view.py    # Lista de tweaks, filtros e "Aplicar Todos"
-│       │   └── presets_view.py   # Cards dos perfis pré-definidos
-│       └── components/
-│           ├── tweak_card.py     # Card individual com tag, status e botão
-│           └── progress_modal.py # Diálogo de progresso não-bloqueante
+│   ├── bootstrap.py              # Raiz de composição (DI + logging)
+│   ├── main.py                   # Elevação UAC e inicialização da UI
+│   ├── domain/                   # entities, enums, result, batch_report, presets, formatting
+│   ├── ports/                    # tweak_port, restore_port, system_port
+│   ├── use_cases/                # tweak_manager, batch_runner, presets_manager, system_service, status_report
+│   ├── adapters/
+│   │   ├── operations/           # Operações reversíveis: registro, serviço, energia, limpeza
+│   │   ├── catalog/              # Catálogo declarativo por categoria
+│   │   ├── catalog_tweak_adapter.py  # TweakPort com backup e rollback
+│   │   └── registry/services/powercfg/disk_clean/restore/windows_system/uac adapters
+│   └── ui/                       # app_window, views, components, task_runner, batch_flow, theme
+└── tests/                        # unittest com dublês do sistema
 ```
+
+### Decisões adicionais de implementação
+
+- **Backup do estado original**: antes de aplicar, cada operação captura o valor atual em
+  `%LOCALAPPDATA%\WinTweaks\state_backup.json`; reverter restaura o valor do usuário (ou o padrão do Windows
+  se o tweak já estava aplicado fora do app).
+- **Aplicação atômica**: falha numa operação desfaz as anteriores do mesmo tweak.
+- **Ações pontuais** (limpezas) são do tipo `ACTION`: não têm estado nem reversão e informam o espaço liberado.
+- **Tweaks adicionais** fora do catálogo original: Nagle (TCP NoDelay), ASPM do PCIe, timer global (Win 11),
+  inicialização rápida, aceleração do mouse, teclas de aderência, suspensão seletiva de USB, apps em segundo plano,
+  pesquisa web do Menu Iniciar e cache de shaders.
+- **Presets**: "Competitivo" (alinhado ao catálogo + Nagle, mouse e teclas de aderência), "Equilibrado",
+  "Privacidade & Segundo Plano" (novo) e "Limpeza Rápida".
 
 ---
 
