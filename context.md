@@ -1,4 +1,4 @@
-# Contexto do Projeto: Windows PC Tweaks (Gaming & Performance)
+# Contexto do Projeto: CaniTweaks (Gaming & Performance)
 
 > **Documento de Especificação Arquitetural e Funcional**  
 > Consolidado através do processo de `/brainstorming` com aplicação de **Clean Architecture (Ports & Adapters)**.
@@ -7,9 +7,9 @@
 
 ## 1. Visão Geral e Propósito
 
-O **Windows PC Tweaks** é um utilitário desktop moderno, leve, rápido e portátil para Windows 10 e Windows 11 (64-bit). Seu objetivo é otimizar as configurações do sistema operacional voltadas para **jogos (especialmente jogos competitivos/FPS)** e responsividade geral da máquina, sem recorrer a práticas nocivas ("snake oil"), sem quebrar o Windows Update e sem risco de banimento por sistemas anti-cheat (como Riot Vanguard, Easy Anti-Cheat ou BattlEye).
+O **CaniTweaks** é um utilitário desktop moderno, leve, rápido e portátil para Windows 10 e Windows 11 (64-bit). Seu objetivo é otimizar as configurações do sistema operacional voltadas para **jogos (especialmente jogos competitivos/FPS)** e responsividade geral da máquina, sem recorrer a práticas nocivas ("snake oil"), sem quebrar o Windows Update e sem risco de banimento por sistemas anti-cheat (como Riot Vanguard, Easy Anti-Cheat ou BattlEye).
 
-O aplicativo é desenvolvido em **Python 3.11+**, utiliza interface gráfica em **CustomTkinter** (tema escuro estilo Fluent/Windows 11) e é distribuído como um executável autônomo (`.exe`) portátil, dispensando instalação do Python na máquina do usuário final.
+O aplicativo é desenvolvido em **Python 3.11+**, utiliza interface gráfica em **CustomTkinter** (tema escuro com a paleta da marca Caninana e fonte JetBrains Mono embutida) e é distribuído como um executável autônomo (`.exe`) portátil, dispensando instalação do Python na máquina do usuário final.
 
 ---
 
@@ -117,37 +117,20 @@ Cada ajuste foi validado contra a documentação do Windows e os melhores projet
 
 O sistema segue os princípios de separação estrita de responsabilidades: o **Domínio** e os **Casos de Uso** não sabem nada sobre a interface gráfica (CustomTkinter) nem dependem diretamente de chamadas de baixo nível, permitindo testes unitários e modularidade.
 
+```text
+        UI (CustomTkinter)  ──►  USE CASES  ──►  PORTS  ◄──  ADAPTERS (Windows)
+                                     │
+                                     ▼
+                                  DOMAIN
 ```
-                              ┌────────────────────────────────────────┐
-                              │           PRESENTATION (UI)            │
-                              │     CustomTkinter / Threading Worker   │
-                              └───────────────────┬────────────────────┘
-                                                  │
-                                                  ▼
-                              ┌────────────────────────────────────────┐
-                              │            USE CASES (APP)             │
-                              │  - ApplyTweakUseCase                   │
-                              │  - RevertTweakUseCase                  │
-                              │  - BatchApplyUseCase (Progress/Status) │
-                              │  - ApplyPresetUseCase                  │
-                              └───────┬────────────────────────┬───────┘
-                                      │                        │
-                    ┌─────────────────▼─────────┐   ┌──────────▼─────────────────┐
-                    │       DOMAIN LAYER        │   │        PORTS (INTERFACES)  │
-                    │ - Entity: Tweak           │   │ - TweakActionPort          │
-                    │ - Entity: Preset          │   │ - SystemRestorePort        │
-                    │ - Enums: Category, Status │   │ - WindowsEnvironmentPort   │
-                    └───────────────────────────┘   └──────────┬─────────────────┘
-                                                               │
-                                      ┌────────────────────────┴───────────────┐
-                                      │                                        │
-                                      ▼                                        ▼
-                       ┌─────────────────────────────┐         ┌──────────────────────────────┐
-                       │   ADAPTERS (REGISTRY/SYS)   │         │    ADAPTERS (WMI/SERVICES)   │
-                       │ - WindowsRegistryAdapter    │         │ - WindowsServiceAdapter      │
-                       │ - DiskCleanAdapter          │         │ - SystemRestoreAdapter       │
-                       └─────────────────────────────┘         └──────────────────────────────┘
-```
+
+| Camada | Componentes reais |
+| :-- | :-- |
+| UI | `AppWindow`, `TweaksView`, `PresetsView`, componentes, `UiTaskRunner`, `batch_flow`, `theme`, `fonts` |
+| Use cases | `TweakManager`, `BatchRunner`, `PresetsManager`, `SystemService`, `status_report` |
+| Domain | `Tweak`, `Preset`, `SystemInfo`, enums, `Result`, `BatchReport`, presets padrão |
+| Ports | `TweakPort`, `RestorePointPort`, `SystemPort` |
+| Adapters | `CatalogTweakAdapter` (+ `operations/` e `catalog/`), `WindowsRegistryAdapter`, `WindowsServiceAdapter`, `PowerCfgAdapter`, `DiskCleanAdapter`, `SystemRestoreAdapter`, `WindowsSystemAdapter` |
 
 ### Estrutura de Diretórios (implementada)
 
@@ -164,14 +147,15 @@ pc-tweaks/
 │   │   ├── catalog/              # Catálogo declarativo por categoria
 │   │   ├── catalog_tweak_adapter.py  # TweakPort com backup e rollback
 │   │   └── registry/services/powercfg/disk_clean/restore/windows_system/uac adapters
-│   └── ui/                       # app_window, views, components, task_runner, batch_flow, theme
+│   ├── assets/                   # logo, ícone, tema do customtkinter e fonte JetBrains Mono
+│   └── ui/                       # app_window, views, components, task_runner, batch_flow, theme, fonts
 └── tests/                        # unittest com dublês do sistema
 ```
 
 ### Decisões adicionais de implementação
 
 - **Backup do estado original**: antes de aplicar, cada operação captura o valor atual em
-  `%LOCALAPPDATA%\WinTweaks\state_backup.json`; reverter restaura o valor do usuário (ou o padrão do Windows
+  `%LOCALAPPDATA%\WinTweaks\state_backup.json` (o nome da pasta de dados foi mantido de propósito para não perder backups de estado já gravados); reverter restaura o valor do usuário (ou o padrão do Windows
   se o tweak já estava aplicado fora do app).
 - **Aplicação atômica**: falha numa operação desfaz as anteriores do mesmo tweak.
 - **Ações pontuais** (limpezas) são do tipo `ACTION`: não têm estado nem reversão e informam o espaço liberado.
@@ -202,17 +186,17 @@ pc-tweaks/
 - **Fase 1: Núcleo de Domínio, Ports e Adapters de Baixo Nível**
   - Criação das entidades, enums e contratos de ports.
   - Implementação do `WindowsRegistryAdapter`, `ServicesAdapter`, `DiskCleanAdapter` e `SystemRestoreAdapter`.
-  - Implementação do catálogo com os 11 tweaks curados e suas regras de reversão.
+  - Implementação do catálogo declarativo (21 tweaks hoje; os 11 curados originais mais extras) e suas regras de reversão.
 - **Fase 2: Camada de Casos de Uso e Gestão de Estado**
   - Implementação do `TweakManager` (leitura de status em tempo real).
   - Implementação do `BatchApplyUseCase` com suporte a callbacks de progresso para a UI.
   - Implementação da lógica de perfis no `PresetsManager`.
 - **Fase 3: Interface Gráfica Moderna (CustomTkinter)**
   - Construção da janela principal com tema escuro e menu lateral.
-  - Desenvolvimento dos cards com tags de categoria coloridas e botão Aplicar/Reverter.
+  - Desenvolvimento dos cards com selos neutros (cor só para risco e status) e botão Aplicar/Reverter.
   - Integração assíncrona com `threading.Thread` para garantir 100% de fluidez.
   - Implementação da aba de Presets e do diálogo de conclusão/reinicialização.
 - **Fase 4: Empacotamento e Testes**
-  - Criação do script de build automatizado (`build.py`).
+  - **Pendente:** script de build automatizado (`build.py`/PyInstaller). Deve incluir `app/assets/` (logo, ícone, tema e fonte) via `--add-data`; o carregamento de assets usa `Path(__file__)` e precisará de `sys._MEIPASS` no modo `--onefile`.
   - Testes em ambiente limpo de Windows 10/11.
   - Geração do executável final testado e documentado.

@@ -70,10 +70,10 @@ class TweaksView(ctk.CTkFrame):
     def _build_header(self) -> None:
         header = ctk.CTkFrame(self, fg_color="transparent")
         header.grid(row=0, column=0, sticky="ew", padx=20, pady=(15, 5))
-        ctk.CTkLabel(header, text="⚡ Central de Otimizações", font=ctk.CTkFont(size=22, weight="bold")).pack(side="left")
+        ctk.CTkLabel(header, text="Otimizações do sistema", font=ctk.CTkFont(size=22, weight="bold")).pack(side="left")
 
         self._export_button = ctk.CTkButton(
-            header, text="📄 Exportar relatório", width=150, height=30, fg_color=theme.NEUTRAL,
+            header, text="Exportar relatório", width=150, height=30, fg_color=theme.NEUTRAL, text_color=theme.COBRA_YELLOW,
             hover_color=theme.NEUTRAL_HOVER, command=self._export_report,
         )
         self._export_button.pack(side="right")
@@ -84,26 +84,27 @@ class TweaksView(ctk.CTkFrame):
         bar = ctk.CTkFrame(self, fg_color=theme.PANEL_BG, corner_radius=10)
         bar.grid(row=1, column=0, sticky="ew", padx=20, pady=(5, 8))
 
-        self._search = ctk.CTkEntry(bar, placeholder_text="🔍 Buscar otimização...", height=36, width=280)
+        self._search = ctk.CTkEntry(bar, placeholder_text="Buscar otimização...", height=36, width=280)
         self._search.pack(side="left", padx=12, pady=10)
         self._search.bind("<KeyRelease>", self._on_search_key)
         self._search.bind("<Escape>", self._clear_search)
 
         self._apply_button = ctk.CTkButton(
-            bar, text="⚡ Aplicar visíveis", height=36, font=ctk.CTkFont(size=13, weight="bold"),
+            bar, text="Aplicar visíveis", height=36, font=ctk.CTkFont(size=13, weight="bold"),
             fg_color=theme.ACCENT, hover_color=theme.ACCENT_HOVER, command=self._on_apply_visible,
         )
         self._apply_button.pack(side="right", padx=(6, 12), pady=10)
         self._revert_button = ctk.CTkButton(
             bar, text="↩ Reverter ativos", height=36, font=ctk.CTkFont(size=13, weight="bold"),
-            fg_color=theme.NEUTRAL, hover_color=theme.NEUTRAL_HOVER, command=self._on_revert_visible,
+            fg_color=theme.NEUTRAL, text_color=theme.COBRA_YELLOW, hover_color=theme.NEUTRAL_HOVER, command=self._on_revert_visible,
         )
         self._revert_button.pack(side="right", pady=10)
 
     def _build_filter(self) -> None:
         self._filter = ctk.CTkSegmentedButton(
             self, values=[category.value for category in TweakCategory], command=self._on_category_changed,
-            font=ctk.CTkFont(size=11), selected_color=theme.COLOR_INFO,
+            font=ctk.CTkFont(size=11), selected_color="#7a5c00", selected_hover_color=theme.SCALE_GOLD, text_color="#ffffff",
+            unselected_color="#2a2a2a", unselected_hover_color="#3a3a3a",
         )
         self._filter.set(TweakCategory.ALL.value)
         self._filter.grid(row=2, column=0, sticky="ew", padx=20, pady=(0, 8))

@@ -21,7 +21,7 @@ def build_status_report(
     """Monta um relatório legível com o estado de cada tweak (para exportar em .txt)."""
     tweaks = list(tweaks)
     lines = [
-        "WinTweaks - Relatório de otimizações",
+        "CaniTweaks - Relatório de otimizações",
         f"Gerado em: {generated_at:%d/%m/%Y %H:%M}",
         f"Sistema: {info.windows_label} | Administrador: {'sim' if info.is_admin else 'não'}",
         "",

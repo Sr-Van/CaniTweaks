@@ -22,7 +22,8 @@ class TweakCard(ctk.CTkFrame):
         on_revert: Callable[[str], None],
         **kwargs,
     ):
-        super().__init__(master, corner_radius=10, fg_color=theme.CARD_BG, **kwargs)
+        super().__init__(master, corner_radius=8, fg_color=theme.CARD_BG, border_width=1,
+                         border_color=theme.BORDER, **kwargs)
         self.tweak = tweak
         self._on_apply = on_apply
         self._on_revert = on_revert
@@ -32,7 +33,7 @@ class TweakCard(ctk.CTkFrame):
         self.grid_columnconfigure(0, weight=1)
         self._build_info_column()
         self._build_action_column()
-        self.set_status(TweakStatus.PENDING, pending_text="⏳ Verificando...")
+        self.set_status(TweakStatus.PENDING, pending_text="Verificando...")
 
     # --- Construção -------------------------------------------------------------------------
 
@@ -45,7 +46,9 @@ class TweakCard(ctk.CTkFrame):
         ctk.CTkLabel(
             header, text=self.tweak.name, font=ctk.CTkFont(size=14, weight="bold"), anchor="w"
         ).pack(side="left")
-        self._add_badges(header)
+        badges = ctk.CTkFrame(info, fg_color="transparent")
+        badges.pack(fill="x", anchor="w", pady=(4, 0))
+        self._add_badges(badges)
 
         self._summary = ctk.CTkLabel(
             info,
@@ -62,7 +65,7 @@ class TweakCard(ctk.CTkFrame):
         if self.tweak.technical_detail:
             ctk.CTkLabel(
                 info,
-                text=f"⚙ {self.tweak.technical_detail}",
+                text=self.tweak.technical_detail,
                 font=ctk.CTkFont(size=10),
                 text_color=("#888888", "#707070"),
                 anchor="w",
@@ -71,12 +74,12 @@ class TweakCard(ctk.CTkFrame):
         self._note = ctk.CTkLabel(info, text="", font=ctk.CTkFont(size=11, weight="bold"), anchor="w")
 
     def _add_badges(self, header: ctk.CTkFrame) -> None:
-        self._badge(header, f" {self.tweak.category.value} ", theme.CATEGORY_COLORS.get(self.tweak.category, "#4a4a4a"), "#ffffff", 11)
+        self._badge(header, f" {self.tweak.category.value} ", theme.BADGE_BG, theme.BADGE_TEXT, 10)
         if self.tweak.risk in theme.RISK_COLORS:
             background, foreground = theme.RISK_COLORS[self.tweak.risk]
             self._badge(header, f" Risco {self.tweak.risk.value.lower()} ", background, foreground, 10)
         if self.tweak.requires_restart:
-            self._badge(header, " 🔄 Reinício ", "#4a235a", "#d7bde2", 10)
+            self._badge(header, " Reinício ", "#262626", "#bdbdbd", 10)
 
     @staticmethod
     def _badge(parent, text: str, background: str, foreground: str, size: int) -> None:
@@ -88,7 +91,7 @@ class TweakCard(ctk.CTkFrame):
             text_color=foreground,
             corner_radius=6,
             height=20,
-        ).pack(side="left", padx=(8, 0))
+        ).pack(side="left", padx=(0, 8))
 
     def _build_action_column(self) -> None:
         actions = ctk.CTkFrame(self, fg_color="transparent", width=140)
@@ -143,6 +146,7 @@ class TweakCard(ctk.CTkFrame):
             text=text,
             fg_color=color,
             hover_color=hover,
+            text_color=theme.ON_ACCENT if color == theme.ACCENT else theme.COBRA_YELLOW,
             state="normal" if selectable and self._interaction_enabled else "disabled",
         )
 

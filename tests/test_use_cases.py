@@ -112,7 +112,7 @@ class TestBatchRunner(UseCaseTestCase):
 class TestPresetsManager(UseCaseTestCase):
     def setUp(self):
         super().setUp()
-        presets = [Preset("p", "Preset", "desc", "x", ("a", "b", "inexistente"))]
+        presets = [Preset("p", "Preset", "desc", ("a", "b", "inexistente"))]
         self.presets = PresetsManager(presets, self.manager, self.runner)
 
     def test_unknown_preset_raises(self):

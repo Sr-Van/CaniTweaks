@@ -43,7 +43,7 @@ class PresetsView(ctk.CTkFrame):
     def _build_header(self) -> None:
         header = ctk.CTkFrame(self, fg_color="transparent")
         header.grid(row=0, column=0, sticky="ew", padx=20, pady=(15, 10))
-        ctk.CTkLabel(header, text="🎯 Presets Rápidos", font=ctk.CTkFont(size=22, weight="bold")).pack(anchor="w")
+        ctk.CTkLabel(header, text="Presets rápidos", font=ctk.CTkFont(size=22, weight="bold")).pack(anchor="w")
         ctk.CTkLabel(
             header,
             text="Aplique conjuntos de otimizações com um clique. Cada preset pode ser revertido depois.",

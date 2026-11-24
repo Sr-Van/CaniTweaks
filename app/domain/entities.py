@@ -31,7 +31,6 @@ class Preset:
     id: str
     name: str
     description: str
-    icon: str
     tweak_ids: Tuple[str, ...]
 
 

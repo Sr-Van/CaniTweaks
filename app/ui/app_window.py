@@ -1,10 +1,13 @@
 """Janela principal: barra lateral, avisos globais e troca de abas."""
+from pathlib import Path
 from typing import List
 
 import customtkinter as ctk
+from PIL import Image
 
 from app import __version__
 from app.ui import theme
+from app.ui.fonts import apply_default_font, load_bundled_fonts
 from app.ui.components.dialogs import RestartDialog
 from app.ui.task_runner import UiTaskRunner
 from app.ui.views.presets_view import PresetsView
@@ -16,10 +19,11 @@ from app.use_cases.tweak_manager import TweakManager
 
 _TAB_TWEAKS = "tweaks"
 _TAB_PRESETS = "presets"
+_ASSETS = Path(__file__).resolve().parent.parent / "assets"
 
 
 class AppWindow(ctk.CTk):
-    """Janela principal do WinTweaks."""
+    """Janela principal do CaniTweaks."""
 
     def __init__(
         self,
@@ -28,16 +32,20 @@ class AppWindow(ctk.CTk):
         batch_runner: BatchRunner,
         system_service: SystemService,
     ):
+        load_bundled_fonts()
         super().__init__()
         self._system = system_service
         self._info = system_service.get_info()
         self._pending_restart: List[str] = []
 
         ctk.set_appearance_mode("dark")
-        ctk.set_default_color_theme("blue")
-        self.title("WinTweaks - Gaming & Performance Optimizer")
+        ctk.set_default_color_theme(str(_ASSETS / "caninana_theme.json"))
+        apply_default_font()
+        self.title("CaniTweaks - Gaming & Performance Optimizer")
         self.geometry("1100x740")
         self.minsize(940, 600)
+        self.configure(fg_color=theme.SERPENT_BLACK)
+        self._set_icon()
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
@@ -49,21 +57,37 @@ class AppWindow(ctk.CTk):
     # --- Construção -------------------------------------------------------------------------
 
     def _build_sidebar(self) -> None:
-        sidebar = ctk.CTkFrame(self, width=220, corner_radius=0, fg_color=("#1f1f1f", "#141414"))
+        sidebar = ctk.CTkFrame(self, width=220, corner_radius=0, fg_color=theme.SIDEBAR_BG)
         sidebar.grid(row=0, column=0, sticky="nsew")
         sidebar.grid_propagate(False)
         sidebar.grid_rowconfigure(4, weight=1)
 
-        ctk.CTkLabel(sidebar, text="⚡ WinTweaks", font=ctk.CTkFont(size=20, weight="bold"), anchor="w").grid(
+        ctk.CTkLabel(sidebar, text="CaniTweaks", font=ctk.CTkFont(size=20, weight="bold"), text_color=theme.COBRA_YELLOW, anchor="w").grid(
             row=0, column=0, padx=20, pady=(24, 2), sticky="w")
         ctk.CTkLabel(sidebar, text="Gaming Optimizer", font=ctk.CTkFont(size=12), text_color=theme.MUTED_TEXT,
                      anchor="w").grid(row=1, column=0, padx=20, pady=(0, 24), sticky="w")
 
         self._nav_buttons = {
-            _TAB_TWEAKS: self._nav_button(sidebar, "⚡  Otimizações", _TAB_TWEAKS, row=2),
-            _TAB_PRESETS: self._nav_button(sidebar, "🎯  Presets Rápidos", _TAB_PRESETS, row=3),
+            _TAB_TWEAKS: self._nav_button(sidebar, "Otimizações", _TAB_TWEAKS, row=2),
+            _TAB_PRESETS: self._nav_button(sidebar, "Presets rápidos", _TAB_PRESETS, row=3),
         }
+        self._build_sidebar_logo(sidebar)
         self._build_sidebar_footer(sidebar)
+
+    def _set_icon(self) -> None:
+        try:
+            self.iconbitmap(str(_ASSETS / "caninana.ico"))
+        except Exception:  # noqa: BLE001 - ícone é cosmético; nunca impede a abertura
+            pass
+
+    def _build_sidebar_logo(self, sidebar: ctk.CTkFrame) -> None:
+        try:
+            image = Image.open(_ASSETS / "caninana-logo.png")
+            self._logo = ctk.CTkImage(light_image=image, dark_image=image, size=(180, 180))
+        except Exception:  # noqa: BLE001 - sem logo a interface continua funcional
+            return
+        ctk.CTkLabel(sidebar, text="", image=self._logo, corner_radius=10).grid(
+            row=4, column=0, padx=14, pady=10, sticky="s")
 
     def _nav_button(self, parent, text: str, tab: str, row: int) -> ctk.CTkButton:
         button = ctk.CTkButton(
@@ -78,8 +102,8 @@ class AppWindow(ctk.CTk):
         footer.grid(row=5, column=0, padx=14, pady=20, sticky="ew")
 
         text, color, background = (
-            ("🛡 Administrador", theme.COLOR_SUCCESS, "#12301c") if self._info.is_admin
-            else ("⚠ Sem administrador", theme.COLOR_WARNING, "#33240a")
+            ("Administrador", theme.COLOR_SUCCESS, "#12301c") if self._info.is_admin
+            else ("Sem administrador", theme.COLOR_WARNING, "#33240a")
         )
         ctk.CTkLabel(footer, text=text, font=ctk.CTkFont(size=11, weight="bold"), text_color=color,
                      fg_color=background, corner_radius=6, height=24).pack(fill="x", pady=(0, 6))
@@ -93,7 +117,7 @@ class AppWindow(ctk.CTk):
         content.grid_columnconfigure(0, weight=1)
         content.grid_rowconfigure(1, weight=1)
 
-        self._banners = ctk.CTkFrame(content, fg_color="transparent")
+        self._banners = ctk.CTkFrame(content, fg_color="transparent", height=0)
         self._banners.grid(row=0, column=0, sticky="ew")
         self._build_admin_banner()
         self._build_restart_banner()
@@ -110,21 +134,21 @@ class AppWindow(ctk.CTk):
     def _build_admin_banner(self) -> None:
         if self._info.is_admin:
             return
-        banner = ctk.CTkFrame(self._banners, fg_color="#33240a", corner_radius=8)
+        banner = ctk.CTkFrame(self._banners, fg_color="#2b2208", corner_radius=8)
         banner.pack(fill="x", padx=20, pady=(12, 0))
         ctk.CTkLabel(
-            banner, text="⚠ Sem privilégios de administrador: ajustes do sistema (HKLM, serviços, energia) vão falhar.",
+            banner, text="Sem administrador: ajustes de sistema (HKLM, serviços, energia) vão falhar.",
             text_color=theme.COLOR_WARNING, font=ctk.CTkFont(size=12), anchor="w",
         ).pack(side="left", padx=12, pady=8)
         ctk.CTkButton(
-            banner, text="Reabrir como administrador", width=190, height=28, fg_color=theme.COLOR_WARNING,
-            hover_color="#d68910", text_color="#000000", command=self._elevate,
+            banner, text="Reabrir como admin", width=190, height=28, fg_color=theme.COLOR_WARNING,
+            hover_color=theme.SCALE_GOLD, text_color=theme.ON_ACCENT, command=self._elevate,
         ).pack(side="right", padx=12)
 
     def _build_restart_banner(self) -> None:
-        self._restart_banner = ctk.CTkFrame(self._banners, fg_color="#4a235a", corner_radius=8)
+        self._restart_banner = ctk.CTkFrame(self._banners, fg_color="#3a2d08", corner_radius=8)
         self._restart_label = ctk.CTkLabel(self._restart_banner, text="", font=ctk.CTkFont(size=12), anchor="w",
-                                           text_color="#e8daef")
+                                           text_color=theme.COBRA_YELLOW)
         self._restart_label.pack(side="left", padx=12, pady=8)
         ctk.CTkButton(
             self._restart_banner, text="Reiniciar...", width=110, height=28, fg_color=theme.DANGER,
@@ -140,7 +164,9 @@ class AppWindow(ctk.CTk):
             else:
                 view.grid_forget()
         for name, button in self._nav_buttons.items():
-            button.configure(fg_color=theme.ACCENT if name == tab else "transparent")
+            button.configure(fg_color=theme.ACCENT if name == tab else "transparent",
+                             text_color=theme.ON_ACCENT if name == tab else theme.COBRA_YELLOW,
+                             hover_color=theme.SCALE_GOLD if name == tab else "#2a2a2a")
         self._views[tab].refresh_statuses()
 
     # --- Reinício e elevação ----------------------------------------------------------------
@@ -150,7 +176,7 @@ class AppWindow(ctk.CTk):
             if name not in self._pending_restart:
                 self._pending_restart.append(name)
         count = len(self._pending_restart)
-        self._restart_label.configure(text=f"🔄 Reinício pendente para concluir {count} otimização(ões).")
+        self._restart_label.configure(text=f"Reinício pendente para concluir {count} otimização(ões).")
         self._restart_banner.pack(fill="x", padx=20, pady=(12, 0))
 
     def _open_restart_dialog(self) -> None:

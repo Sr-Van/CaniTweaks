@@ -1,32 +1,34 @@
 """Constantes visuais compartilhadas (cores e textos de estado)."""
 from typing import Dict, Tuple
 
-from app.domain.enums import RiskLevel, TweakCategory, TweakStatus
+from app.domain.enums import RiskLevel, TweakStatus
 
-ACCENT = "#1f6aa5"
-ACCENT_HOVER = "#144870"
-NEUTRAL = "#34495e"
-NEUTRAL_HOVER = "#2c3e50"
+# Paleta Caninana
+SERPENT_BLACK = "#121212"
+COBRA_YELLOW = "#F5C400"
+SCALE_GOLD = "#D9A21B"
+
+ACCENT = COBRA_YELLOW
+ACCENT_HOVER = SCALE_GOLD
+ON_ACCENT = SERPENT_BLACK  # texto sobre o amarelo
+NEUTRAL = "#2e2e2e"
+NEUTRAL_HOVER = "#3a3a3a"
 DANGER = "#c0392b"
 DANGER_HOVER = "#962d22"
 
-CARD_BG = ("#2b2b2b", "#1e1e1e")
-PANEL_BG = ("#232323", "#1a1a1a")
+CARD_BG = ("#2b2b2b", "#181818")
+PANEL_BG = ("#232323", "#181818")
+BORDER = ("#d4d4d8", "#2a2a2a")
+BADGE_BG = "#262626"
+BADGE_TEXT = "#bdbdbd"
+SIDEBAR_BG = ("#1a1a1a", SERPENT_BLACK)
 MUTED_TEXT = "#888888"
 BODY_TEXT = ("#cccccc", "#a0a0a0")
 
 COLOR_SUCCESS = "#2ecc71"
 COLOR_ERROR = "#e74c3c"
 COLOR_WARNING = "#f39c12"
-COLOR_INFO = "#2b7de9"
-
-CATEGORY_COLORS: Dict[TweakCategory, str] = {
-    TweakCategory.LATENCY: "#2980b9",
-    TweakCategory.FPS: "#8e44ad",
-    TweakCategory.INPUT: "#16a085",
-    TweakCategory.RAM_PROCESSES: "#d68910",
-    TweakCategory.DISK_CLEANUP: "#27ae60",
-}
+COLOR_INFO = SCALE_GOLD
 
 # (cor do fundo, cor do texto)
 RISK_COLORS: Dict[RiskLevel, Tuple[str, str]] = {
@@ -38,8 +40,8 @@ RISK_COLORS: Dict[RiskLevel, Tuple[str, str]] = {
 STATUS_STYLE: Dict[TweakStatus, Tuple[str, str]] = {
     TweakStatus.ACTIVE: ("● Ativo", COLOR_SUCCESS),
     TweakStatus.INACTIVE: ("○ Inativo", "#95a5a6"),
-    TweakStatus.PENDING: ("⏳ Processando...", COLOR_INFO),
-    TweakStatus.ERROR: ("⚠ Erro", COLOR_ERROR),
+    TweakStatus.PENDING: ("Processando...", COLOR_INFO),
+    TweakStatus.ERROR: ("Erro", COLOR_ERROR),
     TweakStatus.UNKNOWN: ("? Desconhecido", COLOR_WARNING),
-    TweakStatus.UNSUPPORTED: ("⛔ Indisponível", "#7f8c8d"),
+    TweakStatus.UNSUPPORTED: ("Indisponível", "#7f8c8d"),
 }

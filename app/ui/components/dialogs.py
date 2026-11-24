@@ -48,7 +48,8 @@ class _ModalDialog(ctk.CTkToplevel):
 
     @staticmethod
     def _button(parent, text: str, command: Callable[[], None], color: str = theme.NEUTRAL, hover: str = theme.NEUTRAL_HOVER):
-        button = ctk.CTkButton(parent, text=text, width=140, fg_color=color, hover_color=hover, command=command)
+        button = ctk.CTkButton(parent, text=text, width=140, fg_color=color, hover_color=hover, command=command,
+                               text_color=theme.ON_ACCENT if color == theme.ACCENT else (theme.COBRA_YELLOW if color == theme.NEUTRAL else "#ffffff"))
         button.pack(side="left", padx=8)
         return button
 
@@ -121,7 +122,7 @@ class BatchReportDialog(_ModalDialog):
 
         self._button(buttons, "Fechar", self.destroy)
         if report.restart_required and on_restart:
-            self._button(buttons, "🔄 Reiniciar...", self._restart, theme.DANGER, theme.DANGER_HOVER)
+            self._button(buttons, "Reiniciar...", self._restart, theme.DANGER, theme.DANGER_HOVER)
 
     @staticmethod
     def _summary_line(report: BatchReport) -> str:
@@ -138,9 +139,9 @@ class BatchReportDialog(_ModalDialog):
     def _notes(report: BatchReport) -> List[str]:
         notes = []
         if report.restore_point is not None and not report.restore_point.ok:
-            notes.append(f"⚠ Ponto de restauração não criado: {report.restore_point.error}")
+            notes.append(f"Ponto de restauração não criado: {report.restore_point.error}")
         if report.restart_required:
-            notes.append(f"🔄 Reinicie o Windows para concluir: {', '.join(report.restart_required)}.")
+            notes.append(f"Reinicie o Windows para concluir: {', '.join(report.restart_required)}.")
         return notes
 
     @staticmethod
@@ -175,7 +176,7 @@ class RestartDialog(_ModalDialog):
         self._on_cancel_restart = on_cancel_restart
         self._delay = delay_seconds
 
-        self._title_label("🔄 Reinicialização")
+        self._title_label("Reinicialização")
         pending_text = f"\n\nPendentes: {', '.join(pending)}." if pending else ""
         self._message = ctk.CTkLabel(
             self, wraplength=410, justify="center", font=ctk.CTkFont(size=12),
@@ -198,7 +199,7 @@ class RestartDialog(_ModalDialog):
         )
         self._later_button.configure(text="Fechar")
         self._action_button.configure(text="Cancelar reinício", command=self._cancel,
-                                      fg_color=theme.ACCENT, hover_color=theme.ACCENT_HOVER)
+                                      fg_color=theme.ACCENT, hover_color=theme.ACCENT_HOVER, text_color=theme.ON_ACCENT)
 
     def _cancel(self) -> None:
         result = self._on_cancel_restart()

@@ -9,7 +9,7 @@ from app.domain.result import Result
 from app.ports.system_port import SystemPort
 
 _WINDOWS_11_FIRST_BUILD = 22000
-_RESTART_REASON = "WinTweaks: reinício necessário para concluir as otimizações."
+_RESTART_REASON = "CaniTweaks: reinício necessário para concluir as otimizações."
 
 
 class WindowsSystemAdapter(SystemPort):

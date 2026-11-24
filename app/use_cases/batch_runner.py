@@ -12,7 +12,7 @@ from app.use_cases.tweak_manager import TweakManager
 ProgressCallback = Callable[[int, int, str], None]
 CancelCheck = Callable[[], bool]
 
-RESTORE_POINT_DESCRIPTION = "WinTweaks - antes de aplicar otimizações"
+RESTORE_POINT_DESCRIPTION = "CaniTweaks - antes de aplicar otimizações"
 
 
 class BatchRunner:

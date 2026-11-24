@@ -23,7 +23,7 @@ class ProgressPanel(ctk.CTkFrame):
         self._bar.grid(row=1, column=0, sticky="ew", padx=14, pady=(0, 12))
 
         self._cancel_button = ctk.CTkButton(
-            self, text="Cancelar", width=90, height=28, fg_color=theme.NEUTRAL,
+            self, text="Cancelar", width=90, height=28, fg_color=theme.NEUTRAL, text_color=theme.COBRA_YELLOW,
             hover_color=theme.NEUTRAL_HOVER, command=on_cancel,
         )
         self._cancel_button.grid(row=0, column=1, rowspan=2, padx=(0, 14))

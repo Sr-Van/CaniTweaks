@@ -22,7 +22,8 @@ class PresetCard(ctk.CTkFrame):
         on_revert: Callable[[str], None],
         **kwargs,
     ):
-        super().__init__(master, corner_radius=12, fg_color=theme.CARD_BG, **kwargs)
+        super().__init__(master, corner_radius=8, fg_color=theme.CARD_BG, border_width=1,
+                         border_color=theme.BORDER, **kwargs)
         self.preset = preset
         self._on_apply = on_apply
         self._on_revert = on_revert
@@ -32,14 +33,14 @@ class PresetCard(ctk.CTkFrame):
         self._build_title_row()
         self._description = self._add_wrapped_label(preset.description, 12, theme.BODY_TEXT, (0, 10))
         self._build_progress_row()
-        self._add_wrapped_label(f"Inclui: {' · '.join(tweak_names)}", 11, theme.COLOR_INFO, (0, 14))
+        self._add_wrapped_label(f"Inclui: {' · '.join(tweak_names)}", 11, theme.MUTED_TEXT, (0, 14))
         self.bind("<Configure>", self._on_resize)
 
     def _build_title_row(self) -> None:
         row = ctk.CTkFrame(self, fg_color="transparent")
         row.pack(fill="x", padx=18, pady=(16, 6))
         ctk.CTkLabel(
-            row, text=f"{self.preset.icon}  {self.preset.name}", font=ctk.CTkFont(size=16, weight="bold")
+            row, text=self.preset.name, font=ctk.CTkFont(size=16, weight="bold")
         ).pack(side="left")
 
         self._apply_button = ctk.CTkButton(
@@ -50,7 +51,7 @@ class PresetCard(ctk.CTkFrame):
         self._apply_button.pack(side="right")
         self._revert_button = ctk.CTkButton(
             row, text="Reverter", width=90, height=34, font=ctk.CTkFont(size=12, weight="bold"),
-            fg_color=theme.NEUTRAL, hover_color=theme.NEUTRAL_HOVER,
+            fg_color=theme.NEUTRAL, text_color=theme.COBRA_YELLOW, hover_color=theme.NEUTRAL_HOVER,
             command=lambda: self._on_revert(self.preset.id),
         )
         self._revert_button.pack(side="right", padx=(0, 8))

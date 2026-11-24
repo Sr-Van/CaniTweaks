@@ -1,9 +1,9 @@
-# ⚡ WinTweaks - Gaming & Performance Optimizer
+# CaniTweaks - Gaming & Performance Optimizer
 
 Utilitário desktop para otimizar o Windows 10/11 (64-bit) focado em jogos e baixa latência, escrito em
 Python com interface CustomTkinter e **Clean Architecture (Ports & Adapters)**.
 
-> ⚠️ **Use por sua conta e risco.** Todos os ajustes são reversíveis e o app cria um ponto de
+> **Use por sua conta e risco.** Todos os ajustes são reversíveis e o app cria um ponto de
 > restauração antes de aplicar em lote, mas alterar configurações do sistema sempre carrega algum risco.
 
 ## Recursos
@@ -38,7 +38,8 @@ python run.py
 O app pede elevação (UAC) ao abrir. Sem administrador, ajustes em `HKLM`, serviços e energia falham com
 mensagem clara; os demais continuam funcionando.
 
-Logs e backups ficam em `%LOCALAPPDATA%\WinTweaks` (`wintweaks.log` e `state_backup.json`).
+Logs e backups ficam em `%LOCALAPPDATA%\WinTweaks` (`wintweaks.log` e `state_backup.json`). O nome da pasta
+é herdado da primeira versão e foi mantido para preservar backups já gravados.
 
 ## Testes
 
@@ -60,7 +61,8 @@ app/
 │   ├── operations/   Operações atômicas reversíveis (registro, serviço, energia, limpeza)
 │   ├── catalog/      Catálogo declarativo dos tweaks, um módulo por categoria
 │   └── catalog_tweak_adapter.py   TweakPort: backup, rollback, aplicar/reverter/verificar
-├── ui/          CustomTkinter: janela, views, componentes e executor de tarefas em segundo plano
+├── ui/          CustomTkinter: janela, views, componentes, tema/fonte e executor de tarefas em segundo plano
+├── assets/      Logo e ícone da Caninana, tema do customtkinter e fonte JetBrains Mono (OFL)
 └── bootstrap.py Raiz de composição (injeção de dependências e logging)
 ```
 

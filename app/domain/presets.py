@@ -11,7 +11,6 @@ DEFAULT_PRESETS: Tuple[Preset, ...] = (
             "Otimização voltada ao menor input lag e à máxima estabilidade de quadros (1% lows) "
             "em jogos competitivos."
         ),
-        icon="🎮",
         tweak_ids=(
             "hags",
             "disable_fso",
@@ -32,7 +31,6 @@ DEFAULT_PRESETS: Tuple[Preset, ...] = (
             "Ganho perceptível de fluidez preservando efeitos visuais, serviços multimídia "
             "e conveniências do Windows."
         ),
-        icon="⚖️",
         tweak_ids=(
             "game_mode",
             "ultimate_performance",
@@ -47,7 +45,6 @@ DEFAULT_PRESETS: Tuple[Preset, ...] = (
             "Reduz coleta de dados, sugestões patrocinadas e aplicativos rodando em segundo plano, "
             "liberando RAM e rede."
         ),
-        icon="🔒",
         tweak_ids=(
             "disable_telemetry",
             "disable_consumer_features",
@@ -62,7 +59,6 @@ DEFAULT_PRESETS: Tuple[Preset, ...] = (
             "Remove arquivos temporários, relatórios de erro e dumps acumulados "
             "sem alterar configurações do sistema."
         ),
-        icon="🧹",
         tweak_ids=(
             "clean_temp_files",
             "clean_prefetch_dumps",
